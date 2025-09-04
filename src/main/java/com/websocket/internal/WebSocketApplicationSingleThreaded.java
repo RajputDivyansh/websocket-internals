@@ -1,4 +1,4 @@
-package com.personal.websocket;
+package com.websocket.internal;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
