@@ -88,7 +88,12 @@ class ClientHandler implements Runnable {
             while (true) {
                 int b1 = readByte();
                 int b2 = readByte();
-
+                // 0x80    1000 0000
+                // 0x40    0100 0000
+                // 0x40    0010 0000
+                // 0x40    0001 0000
+                // 0x0F    0000 1111
+                // 0x7F    0111 1111
                 boolean fin     = (b1 & 0x80) != 0;
                 boolean rsv1    = (b1 & 0x40) != 0;
                 boolean rsv2    = (b1 & 0x20) != 0;
