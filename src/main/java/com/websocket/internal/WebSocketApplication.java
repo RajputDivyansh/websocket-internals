@@ -1,6 +1,12 @@
 package com.websocket.internal;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import java.io.FileInputStream;
 import java.net.*;
+import java.security.KeyStore;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -35,6 +41,20 @@ public class WebSocketApplication {
 
     public static void main(String[] args) throws Exception {
         int port = 8080;
+//        int tlsPort = 8443;
+//        SSLServerSocket sslServer = createSslServerSocket(tlsPort, "keystore.jks", "password");
+//        System.out.println("WSS server started on port " + tlsPort);
+//
+//        while(true) {
+//            SSLSocket client = (SSLSocket) sslServer.accept();
+//            // IMPORTANT: require handshake before using streams on some JVMs
+//            client.setUseClientMode(false);
+//            client.startHandshake(); // optional but good for early failures
+//            // pass the SSLSocket into your handler (works same as plain Socket)
+//            ClientHandler handler = new ClientHandler(client);
+//            clients.add(handler);
+//            executor.execute(handler);
+//        }
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("WebSocket broadcast server (thread pool + permessage-deflate + fragmentation) on port " + port);
@@ -63,6 +83,33 @@ public class WebSocketApplication {
                 client.sendBinary(message);
             }
         }
+    }
+
+    public static SSLServerSocket createSslServerSocket(int port,
+          String keystorePath, String keystorePassword) throws Exception {
+        // command to create keystore
+
+//        keytool -genkeypair -alias wss-test -keyalg RSA -keysize 2048 \
+//        -keystore keystore.jks -validity 3650 \
+//        -storepass changeit -keypass changeit \
+//        -dname "CN=localhost, OU=dev, O=me, L=City, S=State, C=US"
+
+        KeyStore ks = KeyStore.getInstance("JKS");
+        try (FileInputStream fis = new FileInputStream(keystorePath)) {
+            ks.load(fis, keystorePassword.toCharArray());
+        }
+
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(ks, keystorePassword.toCharArray());
+
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        ctx.init(kmf.getKeyManagers(), null, null);
+
+        SSLServerSocketFactory ssf = ctx.getServerSocketFactory();
+        SSLServerSocket ss = (SSLServerSocket) ssf.createServerSocket(port);
+        // Optional: restrict TLS versions/ciphers for tests
+        ss.setEnabledProtocols(new String[] { "TLSv1.2", "TLSv1.3" });
+        return ss;
     }
 }
 

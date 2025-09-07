@@ -1,9 +1,17 @@
 package com.websocket.internal;
 
 import org.junit.jupiter.api.*;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.Base64;
 import java.util.zip.DataFormatException;
@@ -40,7 +48,27 @@ public class WebSocketServerTest {
         serverThread.interrupt();
     }
 
+    public static SSLSocket createTrustAllSocket(String host, int port) throws Exception {
+        TrustManager[] trustAll = new TrustManager[] {
+              new X509TrustManager() {
+                  public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                  public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                  public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+              }
+        };
+        SSLContext sc = SSLContext.getInstance("TLS");
+        sc.init(null, trustAll, new SecureRandom());
+        SSLSocketFactory sf = sc.getSocketFactory();
+        SSLSocket s = (SSLSocket) sf.createSocket(host, port);
+        s.setEnabledProtocols(new String[] { "TLSv1.2", "TLSv1.3" });
+        s.startHandshake();
+        return s;
+    }
+
+
     private Socket doHandshake(String path, Map<String, String> extraHeaders) throws Exception {
+        // SSL Socket
+//        SSLSocket socket = createTrustAllSocket(HOST, 8443);
         Socket socket = new Socket(HOST, PORT);
         OutputStream out = socket.getOutputStream();
         InputStream in = socket.getInputStream();
