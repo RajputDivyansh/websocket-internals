@@ -1,4 +1,4 @@
-package com.websocket.internal;
+package com.websocket.internal.javanet;
 
 import org.junit.jupiter.api.*;
 

@@ -1,4 +1,4 @@
-package com.websocket.internal;
+package com.websocket.internal.javanet;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;

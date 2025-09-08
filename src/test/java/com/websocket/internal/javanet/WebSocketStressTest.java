@@ -1,8 +1,4 @@
-package com.websocket.internal;
-
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.TestInstance;
+package com.websocket.internal.javanet;
 
 import java.io.*;
 import java.net.*;
