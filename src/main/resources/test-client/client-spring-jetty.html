@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Chat Client</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<h2>WebSocket Chat</h2>
+<button id="sendPublic">Send Broadcast</button>
+<button id="sendPrivate">Send Private</button>
+<button id="joinRoom">Join Room</button>
+<button id="sendRoom">Send to Your Room</button>
+<button id="leaveRoom">Leave Room</button>
+<button id="sendAnyRoom">Send to Any Room</button>
+
+<script>
+    const username = prompt("Enter your username:");
+    // const socket = new SockJS("http://localhost:8080/ws-chat");
+    const socket = new SockJS(`http://localhost:8080/ws-chat?username=${username}`);
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({ username }, () => {
+      console.log("✅ Connected as", username);
+
+      // Subscribe to broadcast chat
+      stompClient.subscribe("/topic/public", (msg) => {
+        console.log("🌐 Broadcast:", JSON.parse(msg.body));
+      });
+
+      // Subscribe to private queue
+      stompClient.subscribe("/user/queue/private", (msg) => {
+        console.log("🔒 Private:", JSON.parse(msg.body));
+      });
+
+      // Send a broadcast message
+      document.getElementById("sendPublic").onclick = () => {
+        stompClient.send("/app/chat", {}, JSON.stringify({
+          from: username,
+          content: "Hello everyone!"
+        }));
+      };
+
+      // Send a private message
+      document.getElementById("sendPrivate").onclick = () => {
+        const to = prompt("Send to (username):");
+        stompClient.send("/app/chat", {}, JSON.stringify({
+          from: username,
+          to: to,
+          content: "Hello " + to + " (private)"
+        }));
+      };
+
+      // Send to any room
+      document.getElementById("sendAnyRoom").onclick = () => {
+        let roomId = prompt("Room ID:");
+        stompClient.send("/app/chat", {}, JSON.stringify({
+          from: username,
+          roomId: roomId,
+          content: "Hello room " + roomId
+        }));
+      };
+
+      // Join Room
+      var roomId = null;
+      document.getElementById("joinRoom").onclick = () => {
+        roomId = prompt("Room ID: ");
+        stompClient.send("/app/chat", {}, JSON.stringify({
+          type: "JOIN",
+          from: username,
+          roomId: roomId
+        }));
+        subscribeRoom(roomId);
+      };
+
+
+      // subscribe to the room
+      var subscription = null;
+      const subscribeRoom = (roomId) => {
+        subscription = stompClient.subscribe("/topic/room/" + roomId, (msg) => {
+          console.log("Room[" + roomId + "]:", JSON.parse(msg.body));
+        });
+      };
+
+      // Send to room
+      document.getElementById("sendRoom").onclick = () => {
+        if (roomId) {
+          stompClient.send("/app/chat", {}, JSON.stringify({
+            type: "MESSAGE",
+            from: username,
+            roomId: roomId,
+            content: "Hello everyone in room1!"
+          }));
+        }
+      };
+
+      // Leave a room
+      document.getElementById("leaveRoom").onclick = () => {
+        if (roomId) {
+          stompClient.send("/app/chat", {}, JSON.stringify({
+            type: "LEAVE",
+            from: username,
+            roomId: roomId
+          }));
+          if (subscription) {
+            subscription.unsubscribe();
+          }
+        }
+      };
+    });
+
+// simle script to see broadcast using stomp
+// run this directly in browser console
+
+//     (async () => {
+//   // Load SockJS and STOMP libraries
+//   await import('https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js');
+//   await import('https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js');
+
+//   // Connect to your local WebSocket endpoint
+//   const socket = new SockJS('http://localhost:8080/ws-stomp');
+//   const stompClient = Stomp.over(socket);
+
+//   stompClient.debug = null; // disable console spam
+
+//   // Connect without headers (you can add auth headers if needed)
+//   stompClient.connect({}, () => {
+//     console.log('✅ Connected to STOMP over SockJS');
+
+//     // Subscribe to topic
+//     stompClient.subscribe('/topic/messages', (msg) => {
+//       console.log('📩 Received:', msg.body);
+//     });
+
+//     // Send a message to the server
+//     stompClient.send('/app/send', {}, 'Hello from browser 👋');
+//   });
+
+//   // Optional: Expose disconnect function
+//  // window.disconnectStomp = () => {
+//    // stompClient.disconnect(() => {
+//      // console.log('❌ Disconnected from STOMP');
+//   //  });
+//   // };
+// })();
+</script>
+</body>
+</html>
